@@ -1,0 +1,285 @@
+<HTML>
+<HEAD>
+<TITLE>Instructions for Constructive Reals Calculator</title>
+</head>
+<BODY BGCOLOR="#FFFFFF">
+<H1>
+<CENTER>CRCalc Instructions</center></h1>
+This is a calculator that operates on "exact" real numbers.
+More precisely, numbers are represented internally so that
+they can be evaluated to any needed precision.  As a
+result, the displayed numbers are accurate to
+an error of strictly less than 1 digit in the last displayed
+digit, no matter how the number was computed.  Subexpressions
+are evaluated to enough precision to ensure that cumulative
+rounding errors remain invisible.
+<P>
+The calculator uses "reverse polish notation".  At any
+point the calculator contains a downward-growing stack of
+numbers.  A number can be added to the bottom of the display
+by typing the digits and pressing the <enter> button.
+Most calculator operations operate on the bottom one or two
+numbers in the display, and replace them with the result
+of the operation.  Thus 1 + 2 is entered as <B>1 enter 2 +</b>.
+<P>
+This entry method avoids the need for parentheses and makes
+better use of a two-dimensional display.
+<H2>Overview</h2>
+The calculator window is composed of several regions.
+From top to bottom they are.
+<DL>
+<DT>
+<B>The main display.</b>
+<DD>
+This displays numbers entered into the calculator and results.
+Newly entered or computed numbers appear toward the bottom of the
+display.  If more numbers are entered than fit into the display,
+a scrollbar on the right can be used to move between them.
+<P>
+Calculator commands can be entered either by using the keypad
+(see below) or by typing with the display as the input focus.
+<DT>
+<B>Right-to-left scrolling control for the display.</b>
+<DD>
+Immediately below the display is a scrollbar and a small text
+window.  Either can be used to control right-to-left scrolling
+of the display.  At any point, the small text window displays the
+weight of the rightmost displayed digit.  If the window reads -125,
+then the rightmost displayed digit is 125 digits to the right of
+the decimal point, and thus has weight 10<SUP>125</sup>.
+<P>
+This value can be adjusted either by editing the text window,
+or by using the slide control.  Note that very large negative
+values are likely to require substantial time and memory to update
+the display.  (Values below -1000 are likely to produce annoying
+pauses.  Values below -10,000,000 are likely to result in error
+messages, possibly after a very long pause.)
+<P>
+Large positive values are likely to result in all significant
+digits moving to beyond the right side of the display.  This
+is indicated by a display entry of <B>--></b>.
+<P>
+Note that the scrollbar has a comparatively limited range, and
+its resolution is far better near 0 than away from 0.
+<DT>
+<B>The keypad area.</b>
+<DD>
+This includes a control panel area on the left, and the main
+calculator keypad on the right.  The control panel area includes
+several buttons whose labels change in response to the state
+of the calculator.  These are often useful simply for determining
+calculator state.
+<DT>
+<B>The history window.</b>
+<DD>
+This includes recently entered commands, in the form
+in which they could have been typed on the computer keyboard.
+The text area is edit-able and, with the aid of the
+<B>replay</b> button, can be used to correct and replay
+previously entered commands.  (On many platforms it also provides
+a somewhat clumsy mechanism for pasting in numbers from other sources
+which bypasses the restrictions on clipboard access from Java applets.)
+</dl>
+<H1>Keypad and keyboard commands</h1>
+Most commands can be entered either by clicking a keypad button on the
+screen, or by typing a single character on the computer keyboard.
+Here we list first the keypad label for the command, and then the
+equivalent keyboard characters for each command.
+They are listed approximately in the order in which they appear on the keypad.
+<DL>
+<DT>
+<B>1/x</b>, %
+<DD>
+Replace the last entry in the display by its reciprocal.
+The entry must be nonzero.  A zero entry will cause the calculator
+to run until it is explicitly stopped, exhausts memory, or exceeds
+an internal limit on requested precision.  (The calculator cannot
+determine whether an entry is exactly zero.  You will be asked if
+you want to proceed if the entry appears to be zero.  The recommended
+answer is "no" unless you believe the entry to be very small but nonzero.)
+<DT>
+<B>sqrt</b>, r, R
+<DD>
+Replace the last displayed entry by its square root.  The entry
+must be nonnegative.
+<DT>
+<B>exp</b>, x, X
+<DD>
+Replace the last displayed entry <I>y</i> by <I>e<SUP>y</sup></i>.
+<DT>
+<B>ln</b>, l, L
+<DD>
+Replace the last displayed entry by its natural logarithm, i.e.
+logarithm base <I>e</i>.  The entry must be positive.  The
+base 10 logarithm can be computed by dividing by ln(10).
+<DT>
+<B>x^y</b>, ^
+<DD>
+If the second to the last entry is <I>x</i> and the last entry is
+<I>y</i>, replace them both by <I>x<SUP>y</sup></i>.  Since this
+deals with arbitrary exponents, <I>x</i> is required to be positive.
+<DT>
+<B>C/CE</b>, #
+<DD>
+Clear either an incompletely entered number, or the bottom entry on
+the stack.  The <backspace> key on the keyboard deletes just the
+last entered digit.  If there is no incomplete entry, <backspace>
+behaves like #.
+<DT>
+<B>sin</b>, s
+<DD>
+Replace the last entry by its sine.  By default, the argument is
+in radians.  In degree mode, this and the next two functions
+interpret their argument as a number of degrees.
+<DT>
+<B>cos</b>, k
+<DD>
+Replace the last entry by its cosine.
+<DT>
+<B>tan</b>, t
+<DD>
+Replace the last entry by its tangent.
+<DT>
+<B>pi</b>, p
+<DD>
+Add the mathematical constant pi (the ratio of a circle's circumference
+to its diameter) to the end of the stack.
+<DT>
+<B>C All</b>, @
+<DD>
+Delete all numbers and any incomplete entries from the stack.
+<DT>
+<B>asin</b>, S
+<DD>
+Replace the last entry by its arcsine.  The argument must be between
+-1 and 1, inclusive.  By default, the result is in radians and between -pi/2
+and pi/2.  In degree mode, the answer is between -90 and 90.
+<DT>
+<B>acos</b>, K
+<DD>
+Replace the last entry by its arccosine.  The argument must be between
+-1 and 1, inclusive.  The result is between 0 and pi (0 and 180).
+<DT>
+<B>atan</b>, T
+<DD>
+Replace the last entry by its arctangent.  The result is between
+-pi/2 and pi/2, exclusive, or between -90 and 90.
+<DT>
+<B>/</b>, /
+<DD>
+Divide the second to the last entry by the last one.
+Replace both by the result.
+The last one must be nonzero.
+<DT>
+<B>xchg</b>, i, I
+<DD>
+Exchange the last two entries on the stack.
+<DT>
+<B>*</b>, *
+<DD>
+Replace the last two stack entries by their product.
+<DT>
+<B>Store M</b>, =
+<DD>
+Copy the top of stack to a separate memory location.
+<DT>
+<B>-</b>, -
+<DD>
+Subtract the last stack entry from the previous one.
+Replace both by the result.
+<DT>
+<B>get M</b>, g
+<DD>
+Append the contents of the memory to the stack as the last entry.
+<DT>
+<B>+</b>, +
+<DD>
+Replace the last two entries on the stack by their sum.
+<DT>
+<B>copy</b>, q, Q
+<DD>
+Append a copy of the previously last stack entry as the last
+stack entry.
+<DT>
+<B>+/-</b>, ~
+<DD>
+Change the sign of the last stack entry, i.e. multiply it by -1.
+<DT>
+<B>enter</b>, $, &lt;blank&gt;, &lt;return&gt;
+<DD>
+Convert the previously entered digits (and possibly decimal point)
+into a real number and append it to the end of the stack.
+All other operations that affect or use the last stack entry do
+this implicitly before they perform their operation.
+Thus this is needed only if multiple numbers are appended
+to the stack without intervening arithmetic operations.
+<DT>
+<B>0</b>-<B>9</b>, 0-9
+<DD>
+Decimal digits used to enter numbers.
+<DT>
+<B>.</b>, .
+<DD>
+Decimal point for numeric entry.
+<DT>
+(no keypad equivalent), a-f
+<DD>
+Hexadecimal digits.  Can be entered only from keyboard.  Valid only
+in hexadecimal mode.
+</dl>
+<H2>Control Panel</h2>
+The control panel provides several additional keys and checkboxes which
+are used
+for purposes other than entering numbers or performing operation on
+the stack.  Several of them also serve to indicate the
+calculator's state.
+state.
+<DL>
+<DT>
+<B>stop</b> or <B>STOP!</b>, (no keyboard equivalent)
+<DD>
+Aborts the operation of the calculator, <I>e.g.</i> after a nonterminating
+computation was inadvertently started.  A label of "stop" indicates
+that the calculator is currently idle, and the button has no effect.
+If the button is labeled "STOP!", then a calculation is in progress.
+(Note that some Java implementations force a delayed response to this button.)
+<DT>
+<B>HELP!</b>, (no keyboard equivalent)
+<DD>
+Pop up a window with short instructions for the calculator.
+<DT>
+<B>replay</b>, (no keyboard equivalent)
+<DD>
+Interpret the selected text in the history window as command
+input to the calculator.  This can be used to replay a previous
+computation with different inputs, or to add a number that was
+previously pasted into the history window to the calculator stack.
+Select the right commands in the history buffer before pushing
+this button.
+<DT>
+<B>write</b>, w, W
+<DD>
+Write the last entry on the stack to the Java console.
+The output includes all digits to the left of the rightmost one
+currently displayed, including those to the left of the display
+window.  (Most browsers do not make the Java console visible by
+default, but provide an option to make it visible.  Most also
+make it possible to copy text from the Java console to
+elsewhere on the desktop.  It is generally not possible for
+Java Applets to write directly to the clipboard.  Hence this
+option was chosen.)
+<DT>
+<B>base 16</b>, !
+<DD>
+A checkbox that allows selection of base 16 (hexadecimal) mode.
+This affects only number entry and display.
+To convert between bases, first enter the number and then switch bases.
+<DT>
+<B>degrees</b>,  "
+<DD>
+A checkbox that allows selection of degree mode.  Affects trignonometric
+and inverse trigonometric functions.  Default is radian mode.
+</dl>
+</body>
+</html>
+
