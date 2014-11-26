@@ -1,9 +1,9 @@
-// Copyright (c) 1999, Silicon Graphics, Inc. -- ALL RIGHTS RESERVED 
-// 
+// Copyright (c) 1999, Silicon Graphics, Inc. -- ALL RIGHTS RESERVED
+//
 // Permission is granted free of charge to copy, modify, use and distribute
 // this software  provided you include the entirety of this notice in all
 // copies made.
-// 
+//
 // THIS SOFTWARE IS PROVIDED ON AN AS IS BASIS, WITHOUT WARRANTY OF ANY
 // KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING, WITHOUT LIMITATION,
 // WARRANTIES THAT THE SUBJECT SOFTWARE IS FREE OF DEFECTS, MERCHANTABLE, FIT
@@ -13,7 +13,7 @@
 // SERVICING, REPAIR OR CORRECTION.  THIS DISCLAIMER OF WARRANTY CONSTITUTES
 // AN ESSENTIAL PART OF THIS LICENSE. NO USE OF ANY SUBJECT SOFTWARE IS
 // AUTHORIZED HEREUNDER EXCEPT UNDER THIS DISCLAIMER.
-// 
+//
 // UNDER NO CIRCUMSTANCES AND UNDER NO LEGAL THEORY, WHETHER TORT (INCLUDING,
 // WITHOUT LIMITATION, NEGLIGENCE OR STRICT LIABILITY), CONTRACT, OR
 // OTHERWISE, SHALL SGI BE LIABLE FOR ANY DIRECT, INDIRECT, SPECIAL,
@@ -26,7 +26,7 @@
 // LAW PROHIBITS SUCH LIMITATION.  SOME JURISDICTIONS DO NOT ALLOW THE
 // EXCLUSION OR LIMITATION OF INCIDENTAL OR CONSEQUENTIAL DAMAGES, SO THAT
 // EXCLUSION AND LIMITATION MAY NOT APPLY TO YOU.
-// 
+//
 // These license terms shall be governed by and construed in accordance with
 // the laws of the United States and the State of California as applied to
 // agreements entered into and to be performed entirely within California
@@ -34,7 +34,7 @@
 // terms shall be subject to the exclusive jurisdiction of the Federal Courts
 // of the Northern District of California (or, absent subject matter
 // jurisdiction in such courts, the courts of the State of California), with
-// venue lying exclusively in Santa Clara County, California. 
+// venue lying exclusively in Santa Clara County, California.
 
 package com.sgi.math;
 

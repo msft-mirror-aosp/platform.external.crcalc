@@ -1,7 +1,6 @@
-The following license covers all material included in the CRCalc.tar
-file, except rpn_calc.java:
+The following license covers all material remaining in this directory.
 
-Copyright © 1999, Silicon Graphics, Inc. -- ALL RIGHTS RESERVED 
+Copyright © 1999, Silicon Graphics, Inc. -- ALL RIGHTS RESERVED
 
 Permission is granted free of charge to copy, modify, use and distribute
 this software  provided you include the entirety of this notice in all
@@ -37,20 +36,5 @@ between California residents.  Any litigation relating to these license
 terms shall be subject to the exclusive jurisdiction of the Federal Courts
 of the Northern District of California (or, absent subject matter
 jurisdiction in such courts, the courts of the State of California), with
-venue lying exclusively in Santa Clara County, California. 
-
-The following license covers rpn_calc.java:
-
-Copyright (c) 2001 Hewlett-Packard Company
-
-Permission to use, copy, modify, distribute and sell this software
-and its documentation for any purpose is hereby granted without fee,
-provided that the above copyright notice appear in all copies and
-that both that copyright notice and this permission notice appear
-in supporting documentation.
-HEWLETT-PACKARD COMPANY MAKES NO REPRESENTATIONS ABOUT THE SUITABILITY
-OF THIS SOFTWARE FOR ANY PURPOSE.  IT IS PROVIDED "AS IS" WITHOUT
-EXPRESS OR IMPLIED WARRANTY.
-
-
+venue lying exclusively in Santa Clara County, California.
 
