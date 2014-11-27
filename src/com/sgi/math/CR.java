@@ -36,13 +36,46 @@
 // jurisdiction in such courts, the courts of the State of California), with
 // venue lying exclusively in Santa Clara County, California.
 
+// Copyright (c) 2001-2004, Hewlett-Packard Development Company, L.P.
+//
+// Permission is granted free of charge to copy, modify, use and distribute
+// this software  provided you include the entirety of this notice in all
+// copies made.
+//
+// THIS SOFTWARE IS PROVIDED ON AN AS IS BASIS, WITHOUT WARRANTY OF ANY
+// KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING, WITHOUT LIMITATION,
+// WARRANTIES THAT THE SUBJECT SOFTWARE IS FREE OF DEFECTS, MERCHANTABLE, FIT
+// FOR A PARTICULAR PURPOSE OR NON-INFRINGING.   HEWLETT-PACKARD ASSUMES
+// NO RISK AS TO THE QUALITY AND PERFORMANCE OF THE SOFTWARE.
+// SHOULD THE SOFTWARE PROVE DEFECTIVE IN ANY RESPECT,
+// HEWLETT-PACKARD ASSUMES NO COST OR LIABILITY FOR ANY
+// SERVICING, REPAIR OR CORRECTION.  THIS DISCLAIMER OF WARRANTY CONSTITUTES
+// AN ESSENTIAL PART OF THIS LICENSE. NO USE OF ANY SUBJECT SOFTWARE IS
+// AUTHORIZED HEREUNDER EXCEPT UNDER THIS DISCLAIMER.
+//
+// UNDER NO CIRCUMSTANCES AND UNDER NO LEGAL THEORY, WHETHER TORT (INCLUDING,
+// WITHOUT LIMITATION, NEGLIGENCE OR STRICT LIABILITY), CONTRACT, OR
+// OTHERWISE, SHALL HEWLETT-PACKARD BE LIABLE FOR ANY DIRECT, INDIRECT, SPECIAL,
+// INCIDENTAL, OR CONSEQUENTIAL DAMAGES OF ANY CHARACTER WITH RESPECT TO THE
+// SOFTWARE INCLUDING, WITHOUT LIMITATION, DAMAGES FOR LOSS OF GOODWILL, WORK
+// STOPPAGE, LOSS OF DATA, COMPUTER FAILURE OR MALFUNCTION, OR ANY AND ALL
+// OTHER COMMERCIAL DAMAGES OR LOSSES, EVEN IF HEWLETT-PACKARD SHALL
+// HAVE BEEN INFORMED OF THE POSSIBILITY OF SUCH DAMAGES.
+// THIS LIMITATION OF LIABILITY SHALL NOT APPLY TO LIABILITY RESULTING
+// FROM HEWLETT-PACKARD's NEGLIGENCE TO THE EXTENT APPLICABLE
+// LAW PROHIBITS SUCH LIMITATION.  SOME JURISDICTIONS DO NOT ALLOW THE
+// EXCLUSION OR LIMITATION OF INCIDENTAL OR CONSEQUENTIAL DAMAGES, SO THAT
+// EXCLUSION AND LIMITATION MAY NOT APPLY TO YOU.
+//
+
 // Added valueOf(string, radix), fixed some documentation comments.
 //              Hans_Boehm@hp.com 1/12/2001
 // Fixed a serious typo in inv_CR():  For negative arguments it produced
-//              the wrong sign.  This affected the sign of divisions with
-//              negative divisors.  Hans_Boehm@hp.com 8/13/2001
+//              the wrong sign.  This affected the sign of divisions.
+// Added byteValue and fixed some comments.  Hans.Boehm@hp.com 12/17/2002
+// Added toStringFloatRep.      Hans.Boehm@hp.com 4/1/2004
 
-package com.sgi.math;
+package com.hp.creals;
 
 import java.math.BigInteger;
 
@@ -90,11 +123,11 @@ import java.math.BigInteger;
 * provides the same functionality, but adds the caching necessary to obtain
 * reasonable performance.
 * <P>
-* Any operation may throw <TT>com.sgi.math.AbortedError</tt> if the thread in
+* Any operation may throw <TT>com.hp.creals.AbortedError</tt> if the thread in
 * which it is executing is interrupted.  (<TT>InterruptedException</tt> cannot
 * be used for this purpose, since CR inherits from <TT>Number</tt>.)
 * <P>
-* Any operation may also throw <TT>com.sgi.math.PrecisionOverflowError</tt>
+* Any operation may also throw <TT>com.hp.creals.PrecisionOverflowError</tt>
 * If the precision request generated during any subcalculation overflows
 * a 28-bit integer.  (This should be extremely unlikely, except as an
 * outcome of a division by zero, or other erroneous computation.)
@@ -130,7 +163,7 @@ public volatile static boolean please_stop = false;
 * Must be defined in subclasses of <TT>CR</tt>.
 * Most users can ignore the existence of this method, and will
 * not ever need to define a <TT>CR</tt> subclass.
-* Returns value / base ** prec rounded to an integer.
+* Returns value / 2 ** precision rounded to an integer.
 * The error in the result is strictly < 1.
 * Informally, approximate(n) gives a scaled approximation
 * accurate to 2**n.
@@ -399,8 +432,8 @@ public volatile static boolean please_stop = false;
       }
 
 /**
-* Should be called only if <TT>x != y</tt>.
-* Return -1 if <TT>this < x</tt>, or +1 if <TT>this > x</tt>.
+* Return -1 if <TT>this &lt; x</tt>, or +1 if <TT>this &gt; x</tt>.
+* Should be called only if <TT>this != x</tt>.
 * If <TT>this == x</tt>, this will not terminate correctly; typically it
 * will run until it exhausts memory.
 * If the two constructive reals may be equal, the two or 3 argument
@@ -428,8 +461,8 @@ public volatile static boolean please_stop = false;
       }
 
 /**
-* Should be called only if <TT>x != 0</tt>.
 * Return -1 if negative, +1 if positive.
+* Should be called only if <TT>this != 0</tt>.
 * In the 0 case, this will not terminate correctly; typically it
 * will run until it exhausts memory.
 * If the two constructive reals may be equal, the one or two argument
@@ -475,7 +508,7 @@ public volatile static boolean please_stop = false;
 * Return a textual representation accurate to <TT>n</tt> places
 * to the right of the decimal point.  <TT>n</tt> must be nonnegative.
 *
-*       @param  n       Number of digits included to the right of decimal point
+*       @param  n       Number of digits (>= 0) included to the right of decimal point
 *       @param  radix   Base ( >= 2, <= 16) for the resulting representation.
 */
       public String toString(int n, int radix) {
@@ -526,6 +559,63 @@ public volatile static boolean please_stop = false;
         return toString(10);
     }
 
+    static double doubleLog2 = Math.log(2.0);
+/**
+* Return a textual scientific notation representation accurate
+* to <TT>n</tt> places to the right of the decimal point.
+* <TT>n</tt> must be nonnegative.  A value smaller than
+* <TT>radix</tt>**-<TT>m</tt> may be displayed as 0.
+* The <TT>mantissa</tt> component of the result is either "0"
+* or exactly <TT>n</tt> digits long.  The <TT>sign</tt>
+* component is zero exactly when the mantissa is "0".
+*
+*       @param  n       Number of digits (&gt; 0) included to the right of decimal point.
+*       @param  radix   Base ( &ge; 2, &le; 16) for the resulting representation.
+*       @param  m       Precision used to distinguish number from zero.
+*                       Expressed as a power of m.
+*/
+    public StringFloatRep toStringFloatRep(int n, int radix, int m) {
+        if (n <= 0) throw new ArithmeticException();
+        double log2_radix = Math.log((double)radix)/doubleLog2;
+        BigInteger big_radix = BigInteger.valueOf(radix);
+        long long_msd_prec = (long)(log2_radix * (double)m);
+        if (long_msd_prec > (long)Integer.MAX_VALUE
+            || long_msd_prec < (long)Integer.MIN_VALUE)
+            throw new PrecisionOverflowError();
+        int msd_prec = (int)long_msd_prec;
+        check_prec(msd_prec);
+        int msd = iter_msd(msd_prec - 2);
+        if (msd == Integer.MIN_VALUE)
+            return new StringFloatRep(0, "0", radix, 0);
+        int exponent = (int)Math.ceil((double)msd / log2_radix);
+                // Guess for the exponent.  Try to get it usually right.
+        int scale_exp = exponent - n;
+        CR scale;
+        if (scale_exp > 0) {
+            scale = CR.valueOf(big_radix.pow(scale_exp)).inverse();
+        } else {
+            scale = CR.valueOf(big_radix.pow(-scale_exp));
+        }
+        CR scaled_res = multiply(scale);
+        BigInteger scaled_int = scaled_res.get_appr(0);
+        int sign = scaled_int.signum();
+        String scaled_string = scaled_int.abs().toString(radix);
+        while (scaled_string.length() < n) {
+            // exponent was too large.  Adjust.
+            scaled_res = scaled_res.multiply(CR.valueOf(big_radix));
+            exponent -= 1;
+            scaled_int = scaled_res.get_appr(0);
+            sign = scaled_int.signum();
+            scaled_string = scaled_int.abs().toString(radix);
+        }
+        if (scaled_string.length() > n) {
+            // exponent was too small.  Adjust by truncating.
+            exponent += (scaled_string.length() - n);
+            scaled_string = scaled_string.substring(0, n);
+        }
+        return new StringFloatRep(sign, scaled_string, radix, exponent);
+    }
+
 /**
 * Return a BigInteger which differs by less than one from the
 * constructive real.
@@ -540,6 +630,14 @@ public volatile static boolean please_stop = false;
 */
     public int intValue() {
         return BigIntegerValue().intValue();
+    }
+
+/**
+* Return an int which differs by less than one from the
+* constructive real.  Behavior on overflow is undefined.
+*/
+    public byte byteValue() {
+        return BigIntegerValue().byteValue();
     }
 
 /**
@@ -615,6 +713,16 @@ public volatile static boolean please_stop = false;
     }
 
 /**
+* Produce a constructive real equivalent to the original, assuming
+* the original was an integer.  Undefined results if the original
+* was not an integer.  Prevents evaluation of digits to the right
+* of the decimal point, and may thus improve performance.
+*/
+    public CR assumeInt() {
+        return new assumed_int_CR(this);
+    }
+
+/**
 * The additive inverse of a constructive real
 */
     public CR negate() {
@@ -683,7 +791,7 @@ public volatile static boolean please_stop = false;
     }
 
 /**
-* The exponential function, i.e. e**<TT>this</tt>.
+* The exponential function, that is e**<TT>this</tt>.
 */
     public CR exp() {
         final int low_prec = -10;
@@ -820,6 +928,23 @@ class int_CR extends CR {
     }
 }
 
+// Representation of a number that may not have been completely
+// evaluated, but is assumed to be an integer.  Hence we never
+// evaluate beyond the decimal point.
+class assumed_int_CR extends CR {
+    CR value;
+    assumed_int_CR(CR x) {
+        value = x;
+    }
+    protected BigInteger approximate(int p) {
+        if (p >= 0) {
+            return value.get_appr(p);
+        } else {
+            return scale(value.get_appr(0), -p) ;
+        }
+    }
+}
+
 // Representation of the sum of 2 constructive reals.  Private.
 class add_CR extends CR {
     CR op1;
@@ -943,7 +1068,7 @@ class mult_CR extends CR {
     }
 }
 
-// Representation of the multiplicative invers of a constructive
+// Representation of the multiplicative inverse of a constructive
 // real.  Private.  Should use Newton iteration to refine estimates.
 class inv_CR extends CR {
     CR op;

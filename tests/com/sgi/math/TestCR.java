@@ -40,7 +40,7 @@
 
 // Added test for division by negative number.  Hans_Boehm@hp.com, 8/13/01
 
-package com.sgi.math;
+package com.hp.creals;
 import java.math.BigInteger;
 
 public class TestCR {
@@ -138,5 +138,8 @@ public class TestCR {
                           "exp failed at " + n);
             }
         }
+        check_appr_eq(Math.cos(12345678.0),
+                      CR.valueOf(12345678).cos().doubleValue(),
+                      "cos failed at " + 12345678);
     }
 }

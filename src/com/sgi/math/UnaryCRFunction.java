@@ -36,7 +36,7 @@
 // jurisdiction in such courts, the courts of the State of California), with
 // venue lying exclusively in Santa Clara County, California.
 
-package com.sgi.math;
+package com.hp.creals;
 
 import java.math.BigInteger;
 
