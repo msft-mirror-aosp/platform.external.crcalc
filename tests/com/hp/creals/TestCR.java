@@ -39,19 +39,22 @@
 // Superficial sanity test for the constructive reals package.
 
 // Added test for division by negative number.  Hans_Boehm@hp.com, 8/13/01
+// Modified to use AssertionFailedError. hboehm@google.com, 6/6/14
 
 package com.hp.creals;
+
 import java.math.BigInteger;
+import junit.framework.AssertionFailedError;
 
 public class TestCR {
     static void check(boolean x, String s) {
-        if (!x) System.out.println(s);
+        if (!x) throw new AssertionFailedError(s);
     }
     static void check_eq(CR x, CR y, String s) {
-        if (x.compareTo(y, -50) != 0) System.out.println(s);
+        if (x.compareTo(y, -50) != 0) throw new AssertionFailedError(s);
     }
     static void check_appr_eq(double x, double y, String s) {
-        if (Math.abs(x - y) > 0.000001) System.out.println(s);
+        if (Math.abs(x - y) > 0.000001) throw new AssertionFailedError(s);
     }
     public static void main(String argv[]) {
         CR zero = CR.valueOf(0);
@@ -134,8 +137,8 @@ public class TestCR {
             check_appr_eq(Math.exp(n), CR.valueOf(n).exp().doubleValue(),
                           "exp failed at " + n);
             if (n > 0.0) {
-              check_appr_eq(Math.exp(n), CR.valueOf(n).exp().doubleValue(),
-                          "exp failed at " + n);
+              check_appr_eq(Math.log(n), CR.valueOf(n).ln().doubleValue(),
+                          "ln failed at " + n);
             }
         }
         check_appr_eq(Math.cos(12345678.0),

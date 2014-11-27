@@ -74,6 +74,10 @@
 //              the wrong sign.  This affected the sign of divisions.
 // Added byteValue and fixed some comments.  Hans.Boehm@hp.com 12/17/2002
 // Added toStringFloatRep.      Hans.Boehm@hp.com 4/1/2004
+// Added get_appr() synchronization to allow access from multiple threads
+// hboehm@google.com 4/25/2014
+// Changed cos() prescaling to avoid logarithmic depth tree.
+// hboehm@google.com 6/30/2014
 
 package com.hp.creals;
 
@@ -169,6 +173,8 @@ public volatile static boolean please_stop = false;
 * accurate to 2**n.
 * Implementations may safely assume that precision is
 * at least a factor of 8 away from overflow.
+* Called only with the lock on the <TT>CR</tt> object
+* already held.
 */
       protected abstract BigInteger approximate(int precision);
       transient int min_prec;
@@ -231,8 +237,8 @@ public volatile static boolean please_stop = false;
 * The result is undefined if argument is infinite or NaN.
 */
       public static CR valueOf(double n) {
-        if (Double.isNaN(n)) throw new ArithmeticException();
-        if (Double.isInfinite(n)) throw new ArithmeticException();
+        if (Double.isNaN(n)) throw new ArithmeticException("Nan argument");
+        if (Double.isInfinite(n)) throw new ArithmeticException("Infinite argument");
         boolean negative = (n < 0.0);
         long bits = Double.doubleToLongBits(Math.abs(n));
         long mantissa = (bits & 0xfffffffffffffL);
@@ -286,7 +292,7 @@ public volatile static boolean please_stop = false;
 * methods in subclasses.  Not needed if the provided operations
 * on constructive reals suffice.
 */
-      public BigInteger get_appr(int precision) {
+      public synchronized BigInteger get_appr(int precision) {
         check_prec(precision);
         if (appr_valid && precision >= min_prec) {
             return scale(max_appr, min_prec - precision);
@@ -575,7 +581,7 @@ public volatile static boolean please_stop = false;
 *                       Expressed as a power of m.
 */
     public StringFloatRep toStringFloatRep(int n, int radix, int m) {
-        if (n <= 0) throw new ArithmeticException();
+        if (n <= 0) throw new ArithmeticException("Bad precision argument");
         double log2_radix = Math.log((double)radix)/doubleLog2;
         BigInteger big_radix = BigInteger.valueOf(radix);
         long long_msd_prec = (long)(log2_radix * (double)m);
@@ -819,18 +825,17 @@ public volatile static boolean please_stop = false;
 * The trigonometric cosine function.
 */
     public CR cos() {
-        BigInteger rough_appr = get_appr(-1);
-        BigInteger abs_rough_appr = rough_appr.abs();
-        if (abs_rough_appr.compareTo(big6) >= 0) {
+        BigInteger pi_multiples = divide(PI).get_appr(0);
+        BigInteger abs_pi_multiples = pi_multiples.abs();
+        if (abs_pi_multiples.compareTo(big2) >= 0) {
             // Subtract multiples of PI
-            BigInteger multiplier = rough_appr.divide(big6);
-            CR adjustment = PI.multiply(CR.valueOf(multiplier));
-            if (multiplier.and(big1).signum() != 0) {
+            CR adjustment = PI.multiply(CR.valueOf(pi_multiples));
+            if (abs_pi_multiples.and(big1).signum() != 0) {
                 return subtract(adjustment).cos().negate();
             } else {
                 return subtract(adjustment).cos();
             }
-        } else if (abs_rough_appr.compareTo(big2) >= 0) {
+        } else if (get_appr(-1).abs().compareTo(big2) >= 0) {
             // Scale further with double angle formula
             CR cos_half = shiftRight(1).cos();
             return cos_half.multiply(cos_half).shiftLeft(1).subtract(one);
@@ -859,7 +864,7 @@ public volatile static boolean please_stop = false;
         final int low_prec = -4;
         BigInteger rough_appr = get_appr(low_prec); /* In sixteenths */
         if (rough_appr.compareTo(big0) < 0) {
-            throw new ArithmeticException();
+            throw new ArithmeticException("ln(negative)");
         }
         if (rough_appr.compareTo(low_ln_limit) <= 0) {
             return inverse().ln().negate();
@@ -900,7 +905,7 @@ public volatile static boolean please_stop = false;
 abstract class slow_CR extends CR {
     static int max_prec = -64;
     static int prec_incr = 32;
-    public BigInteger get_appr(int precision) {
+    public synchronized BigInteger get_appr(int precision) {
         check_prec(precision);
         if (appr_valid && precision >= min_prec) {
             return scale(max_appr, min_prec - precision);
@@ -1326,7 +1331,8 @@ class sqrt_CR extends CR {
             BigInteger scaled_bi_appr = op.get_appr(op_prec)
                                         .shiftLeft(fp_op_prec);
             double scaled_appr = scaled_bi_appr.doubleValue();
-            if (scaled_appr < 0.0) throw new ArithmeticException();
+            if (scaled_appr < 0.0)
+                throw new ArithmeticException("sqrt(negative)");
             double scaled_fp_sqrt = Math.sqrt(scaled_appr);
             BigInteger scaled_sqrt = BigInteger.valueOf((long)scaled_fp_sqrt);
             int shift_count = working_prec/2 - p;

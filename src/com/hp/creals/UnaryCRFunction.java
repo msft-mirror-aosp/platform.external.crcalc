@@ -35,6 +35,8 @@
 // of the Northern District of California (or, absent subject matter
 // jurisdiction in such courts, the courts of the State of California), with
 // venue lying exclusively in Santa Clara County, California.
+//
+// 5/2014 Added Strings to ArithmeticExceptions
 
 package com.hp.creals;
 
@@ -375,7 +377,7 @@ class inverseMonotone_UnaryCRFunction extends UnaryCRFunction {
                 // Close cases may fail in other ways.
                   if (f_h.compareTo(arg_appr.subtract(big1)) < 0
                     || f_l.compareTo(arg_appr.add(big1)) > 0) {
-                    throw new ArithmeticException();
+                    throw new ArithmeticException("inverse(out-of-bounds)");
                   }
                 at_left = true;
                 at_right = true;
@@ -614,7 +616,7 @@ class monotoneDerivative_UnaryCRFunction extends UnaryCRFunction {
             CR right_diff = high[0].subtract(arg);
             int max_delta_right_msd = right_diff.msd();
             if (left_diff.signum() < 0 || right_diff.signum() < 0) {
-                throw new ArithmeticException();
+                throw new ArithmeticException("fn not monotone");
             }
             max_delta_msd = (max_delta_left_msd < max_delta_right_msd?
                                 max_delta_left_msd
