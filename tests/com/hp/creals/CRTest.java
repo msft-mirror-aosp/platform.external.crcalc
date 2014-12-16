@@ -40,23 +40,26 @@
 
 // Added test for division by negative number.  Hans_Boehm@hp.com, 8/13/01
 // Modified to use AssertionFailedError. hboehm@google.com, 6/6/14
+// Modified further for Android/JUnit testing framework, 12/15/14
 
 package com.hp.creals;
 
 import java.math.BigInteger;
 import junit.framework.AssertionFailedError;
+import junit.framework.TestCase;
 
-public class TestCR {
-    static void check(boolean x, String s) {
+public class CRTest extends TestCase {
+    private static void check(boolean x, String s) {
         if (!x) throw new AssertionFailedError(s);
     }
-    static void check_eq(CR x, CR y, String s) {
+    private static void check_eq(CR x, CR y, String s) {
         if (x.compareTo(y, -50) != 0) throw new AssertionFailedError(s);
     }
-    static void check_appr_eq(double x, double y, String s) {
+    private static void check_appr_eq(double x, double y, String s) {
         if (Math.abs(x - y) > 0.000001) throw new AssertionFailedError(s);
     }
-    public static void main(String argv[]) {
+    // TODO: Break this up into meaningful smaller tests.
+    public void testCR() {
         CR zero = CR.valueOf(0);
         CR one = CR.valueOf(1);
         CR two = CR.valueOf(2);
