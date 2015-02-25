@@ -39,6 +39,7 @@
 // 5/2014 Added Strings to ArithmeticExceptions
 
 package com.hp.creals;
+// import android.util.Log;
 
 import java.math.BigInteger;
 
@@ -283,6 +284,14 @@ class inverseMonotone_UnaryCRFunction extends UnaryCRFunction {
     final int deriv_msd[] = new int[1];
                                 // Rough approx. of msd of first
                                 // derivative.
+    final static BigInteger BIG1023 = BigInteger.valueOf(1023);
+    static final boolean ENABLE_TRACE = false;  // Change to generate trace
+    static void trace(String s) {
+        if (ENABLE_TRACE) {
+            System.out.println(s);
+            // Change to Log.v("UnaryCRFunction", s); for Android use.
+        }
+    }
     inverseMonotone_UnaryCRFunction(UnaryCRFunction func, CR l, CR h) {
         low[0] = l; high[0] = h;
         CR tmp_f_low = func.execute(l);
@@ -322,13 +331,11 @@ class inverseMonotone_UnaryCRFunction extends UnaryCRFunction {
             return 0;
         }
         protected BigInteger approximate(int p) {
-            final boolean trace = false;        // Change to generate trace
             final int extra_arg_prec = 4;
             final UnaryCRFunction fn = f[0];
-            int small_steps = 0;        // Number of preceding ineffective
-                                        // steps.  If this number gets >= 2,
-                                        // we perform a binary search step
-                                        // to ensure forward progress.
+            int small_step_deficit = 0; // Number of ineffective steps not
+                                        // yet compensated for by a binary
+                                        // search step.
             int digits_needed = max_msd[0] - p;
             if (digits_needed < 0) return big0;
             int working_arg_prec = p - extra_arg_prec;
@@ -339,8 +346,7 @@ class inverseMonotone_UnaryCRFunction extends UnaryCRFunction {
                         // initial guess
             // We use a combination of binary search and something like
             // the secant method.  This always converges linearly,
-            // and should converge quadratically for well-behaved
-            // functions.
+            // and should converge quadratically under favorable assumptions.
             // F_l and f_h are always the approximate images of l and h.
             // At any point, arg is between f_l and f_h, or no more than
             // one outside [f_l, f_h].
@@ -366,9 +372,7 @@ class inverseMonotone_UnaryCRFunction extends UnaryCRFunction {
             BigInteger arg_appr = arg.get_appr(working_eval_prec);
             boolean have_good_appr = (appr_valid && min_prec < max_msd[0]);
             if (digits_needed < 30 && !have_good_appr) {
-                if (trace) {
-                    System.out.println("Setting interval to entire domain");
-                }
+                trace("Setting interval to entire domain");
                 h = high_appr;
                 f_h = f_high[0].get_appr(working_eval_prec);
                 l = low_appr;
@@ -381,7 +385,7 @@ class inverseMonotone_UnaryCRFunction extends UnaryCRFunction {
                   }
                 at_left = true;
                 at_right = true;
-                small_steps = 2;        // Start with bin search step.
+                small_step_deficit = 2;        // Start with bin search steps.
             } else {
                 int rough_prec = p + digits_needed/2;
 
@@ -390,11 +394,8 @@ class inverseMonotone_UnaryCRFunction extends UnaryCRFunction {
                     rough_prec = min_prec;
                 }
                 BigInteger rough_appr = get_appr(rough_prec);
-                if (trace) {
-                    System.out.println("Setting interval based on prev. appr");
-                    System.out.println("prev. prec = " + rough_prec
-                                       + " appr = " + rough_appr);
-                }
+                trace("Setting interval based on prev. appr");
+                trace("prev. prec = " + rough_prec + " appr = " + rough_appr);
                 h = rough_appr.add(big1)
                               .shiftLeft(rough_prec - working_arg_prec);
                 l = rough_appr.subtract(big1)
@@ -422,14 +423,12 @@ class inverseMonotone_UnaryCRFunction extends UnaryCRFunction {
             for(int i = 0;; ++i) {
                 if (Thread.interrupted() || please_stop)
                     throw new AbortedError();
-                if (trace) {
-                    System.out.println("***Iteration: " + i);
-                    System.out.println("Arg prec = " + working_arg_prec
-                                + " eval prec = " + working_eval_prec
-                                + " arg appr. = " + arg_appr);
-                    System.out.println("l = " + l + "; h = " + h);
-                    System.out.println("f(l) = " + f_l + "; f(h) = " + f_h);
-                }
+                trace("***Iteration: " + i);
+                trace("Arg prec = " + working_arg_prec
+                      + " eval prec = " + working_eval_prec
+                      + " arg appr. = " + arg_appr);
+                trace("l = " + l); trace("h = " + h);
+                trace("f(l) = " + f_l); trace("f(h) = " + f_h);
                 if (difference.compareTo(big6) < 0) {
                     // Answer is less than 1/2 ulp away from h.
                     return scale(h, -extra_arg_prec);
@@ -439,29 +438,35 @@ class inverseMonotone_UnaryCRFunction extends UnaryCRFunction {
                 // chosen point (guess) in the middle.
                 {
                     BigInteger guess;
-                    if (small_steps >= 2 || f_difference.signum() == 0) {
+                    boolean binary_step =
+                        (small_step_deficit > 0 || f_difference.signum() == 0);
+                    if (binary_step) {
                         // Do a binary search step to guarantee linear
                         // convergence.
+                        trace("binary step");
                         guess = l.add(h).shiftRight(1);
+                        --small_step_deficit;
                     } else {
                       // interpolate.
                       // f_difference is nonzero here.
+                      trace("interpolating");
                       BigInteger arg_difference = arg_appr.subtract(f_l);
                       BigInteger t = arg_difference.multiply(difference);
                       BigInteger adj = t.divide(f_difference);
-                      if (adj.compareTo(difference.shiftRight(2)) < 0) {
-                        // Very close to left side of interval;
-                        // move closer to center.
-                        // If one of the endpoints is very close to
-                        // the answer, this slows conversion a bit.
-                        // But it greatly increases the probability
-                        // that the answer will be in the smaller
-                        // subinterval.
-                        adj = adj.shiftLeft(1);
-                      } else if (adj.compareTo(difference.multiply(CR.big3)
-                                                       .shiftRight(2)) > 0){
+                          // tentative adjustment to l to compute guess
+                      // If we are within 1/1024 of either end, back off.
+                      // This greatly improves the odds of bounding
+                      // the answer within the smaller interval.
+                      // Note that interpolation will often get us
+                      // MUCH closer than this.
+                      if (adj.compareTo(difference.shiftRight(10)) < 0) {
+                        adj = adj.shiftLeft(8);
+                        trace("adjusting left");
+                      } else if (adj.compareTo(difference.multiply(BIG1023)
+                                                       .shiftRight(10)) > 0){
                         adj = difference.subtract(difference.subtract(adj)
-                                                  .shiftLeft(1));
+                                                  .shiftLeft(8));
+                        trace("adjusting right");
                       }
                       if (adj.signum() <= 0)
                           adj = big2;
@@ -475,15 +480,10 @@ class inverseMonotone_UnaryCRFunction extends UnaryCRFunction {
                     for(boolean adj_prec = false;; adj_prec = !adj_prec) {
                         CR guess_cr = CR.valueOf(guess)
                                         .shiftLeft(working_arg_prec);
-                        if (trace) {
-                            System.out.println("Evaluating at " + guess_cr
-                                        + " with precision "
-                                        + working_eval_prec);
-                        }
+                        trace("Evaluating at " + guess_cr
+                              + " with precision " + working_eval_prec);
                         CR f_guess_cr = fn.execute(guess_cr);
-                        if (trace) {
-                            System.out.println("fn value = " + f_guess_cr);
-                        }
+                        trace("fn value = " + f_guess_cr);
                         f_guess = f_guess_cr.get_appr(working_eval_prec);
                         outcome = sloppy_compare(f_guess, arg_appr);
                         if (outcome != 0) break;
@@ -493,19 +493,16 @@ class inverseMonotone_UnaryCRFunction extends UnaryCRFunction {
                         if (adj_prec) {
                             // adjust working_eval_prec to get enough
                             // resolution.
-                            int adjustment = deriv_msd[0] > 0 ? -20 :
-                                                        deriv_msd[0] - 20;
+                            int adjustment = -f_guess.bitLength()/4;
+                            if (adjustment > -20) adjustment = - 20;
                             CR l_cr = CR.valueOf(l)
                                         .shiftLeft(working_arg_prec);
                             CR h_cr = CR.valueOf(h)
                                         .shiftLeft(working_arg_prec);
                             working_eval_prec += adjustment;
-                            if (trace) {
-                                System.out.println("New eval prec = "
-                                        + working_eval_prec
-                                        + (at_left? "(at left)" : "")
-                                        + (at_right? "(at right)" : ""));
-                            }
+                            trace("New eval prec = " + working_eval_prec
+                                  + (at_left? "(at left)" : "")
+                                  + (at_right? "(at right)" : ""));
                             if (at_left) {
                                 f_l = f_low[0].get_appr(working_eval_prec);
                             } else {
@@ -522,7 +519,7 @@ class inverseMonotone_UnaryCRFunction extends UnaryCRFunction {
                         } else {
                             // guess might be exactly right; tweak it
                             // slightly.
-                            if (trace) System.out.println("tweaking guess");
+                            trace("tweaking guess");
                             BigInteger new_guess = guess.add(tweak);
                             if (new_guess.compareTo(h) >= 0) {
                                 guess = guess.subtract(tweak);
@@ -545,11 +542,13 @@ class inverseMonotone_UnaryCRFunction extends UnaryCRFunction {
                         at_left = false;
                     }
                     BigInteger new_difference = h.subtract(l);
-                    if (new_difference.compareTo(difference
-                                                 .shiftRight(1)) >= 0) {
-                        ++small_steps;
-                    } else {
-                        small_steps = 0;
+                    if (!binary_step) {
+                        if (new_difference.compareTo(difference
+                                                     .shiftRight(1)) >= 0) {
+                            ++small_step_deficit;
+                        } else {
+                            --small_step_deficit;
+                        }
                     }
                     difference = new_difference;
                 }

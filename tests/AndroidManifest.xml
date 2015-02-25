@@ -1,5 +1,5 @@
 <!--
- Copyright (C) 2014 The Android Open Source Project
+ Copyright (C) 2015 The Android Open Source Project
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -14,6 +14,9 @@
  limitations under the License.
 
  Other files in this directory carry a different license.
+
+ Note that the targetPackage is the test itself; that avoids building
+ a second apk solely to test the library.
 -->
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -26,7 +29,8 @@
 
     <instrumentation
         android:name="android.test.InstrumentationTestRunner"
-        android:targetPackage="com.hp.creals" />
+        android:targetPackage="com.hp.creals.tests"
+        android:label="Constructive Reals tests" />
 
     <application>
         <uses-library android:name="android.test.runner" />

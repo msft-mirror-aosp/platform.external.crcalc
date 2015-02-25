@@ -825,12 +825,13 @@ public volatile static boolean please_stop = false;
 * The trigonometric cosine function.
 */
     public CR cos() {
-        BigInteger pi_multiples = divide(PI).get_appr(0);
-        BigInteger abs_pi_multiples = pi_multiples.abs();
-        if (abs_pi_multiples.compareTo(big2) >= 0) {
+        BigInteger halfpi_multiples = divide(PI).get_appr(-1);
+        BigInteger abs_halfpi_multiples = halfpi_multiples.abs();
+        if (abs_halfpi_multiples.compareTo(big2) >= 0) {
             // Subtract multiples of PI
+            BigInteger pi_multiples = scale(halfpi_multiples, -1);
             CR adjustment = PI.multiply(CR.valueOf(pi_multiples));
-            if (abs_pi_multiples.and(big1).signum() != 0) {
+            if (pi_multiples.and(big1).signum() != 0) {
                 return subtract(adjustment).cos().negate();
             } else {
                 return subtract(adjustment).cos();

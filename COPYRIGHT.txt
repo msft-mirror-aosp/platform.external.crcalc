@@ -1,4 +1,5 @@
-The following license covers all material remaining in this directory.
+The following license covers all material remaining in this directory,
+except SlowCRTest.java, which is covered by an Apache 2.0 license.
 
 Copyright © 1999, Silicon Graphics, Inc. -- ALL RIGHTS RESERVED
 

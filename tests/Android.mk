@@ -1,4 +1,4 @@
-# Copyright (C) 2014 The Android Open Source Project
+# Copyright (C) 2015 The Android Open Source Project
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,17 +16,15 @@
 
 LOCAL_PATH := $(call my-dir)
 
-# build the client library
+# build the test apk
 #-------------------------------
 include $(CLEAR_VARS)
 
-LOCAL_SRC_FILES := $(call all-java-files-under, src)
-
-LOCAL_MODULE := CR
-LOCAL_MODULE_TAGS := optional
+LOCAL_PACKAGE_NAME := CRTests
 LOCAL_SDK_VERSION := 8
+LOCAL_MODULE_TAGS := tests
+LOCAL_SRC_FILES := $(call all-java-files-under, src) $(call all-java-files-under, ../src)
+# Empirically, LOCAL_INSTRUMENTATION_FOR doesn't work, perhaps because it
+# expects an apk, not a library.
 
-include $(BUILD_STATIC_JAVA_LIBRARY)
-
-include $(call all-makefiles-under,$(LOCAL_PATH))
-
+include $(BUILD_PACKAGE)
