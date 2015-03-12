@@ -33,15 +33,10 @@ public class SlowCRTest extends TestCase {
     final static int NRANDOM = 100;    // Number of random values to
                                        // test.  Bigger ==> slower
     private static void checkEq(CR x, CR y, String s) {
-        if (x.compareTo(y, TEST_PREC) != 0) throw new AssertionFailedError(s);
-    }
-    private static void checkApprEq(CR x, CR y, String s) {
-        BigInteger abs_difference = x.subtract(y).get_appr(TEST_PREC).abs();
-        if (abs_difference.compareTo(BigInteger.ONE) > 0)
-                throw new AssertionFailedError(s);
+        check(x.compareTo(y, TEST_PREC) == 0, s);
     }
     private static void checkApprEq(double x, double y, String s) {
-        if (Math.abs(x - y) > 0.000001) throw new AssertionFailedError(s);
+        check(Math.abs(x - y) <= 0.000001, s);
     }
     final static BigInteger MASK =
             BigInteger.ONE.shiftLeft(-TEST_PREC).subtract(BigInteger.ONE);
@@ -86,23 +81,23 @@ public class SlowCRTest extends TestCase {
         if (xAsDouble < 3.1415926535 && xAsDouble > 0.0) {
             checkApprEq(COSINE.execute(x).doubleValue(), Math.cos(xAsDouble),
                           "deriv(sin) float compare:"  + xAsDouble);
-            checkApprEq(COSINE.execute(x), x.cos(),
+            checkEq(COSINE.execute(x), x.cos(),
                           "deriv(sin) float compare:"  + xAsDouble);
         }
         // Check that sin(x+v) = sin(x)cos(v) + cos(x)sin(v)
         // for a couple of different values of v.
         for (int i = 1; i <= 5; ++i) {
             CR v = CR.valueOf(i);
-            checkApprEq(
+            checkEq(
                 x.add(v).sin(),
                 x.sin().multiply(v.cos()).add(x.cos().multiply(v.sin())),
                 "Angle sum formula failed for " + xAsDouble + " + " + i);
         }
-        checkApprEq(x.cos().multiply(x.cos()).add(x.sin().multiply(x.sin())),
+        checkEq(x.cos().multiply(x.cos()).add(x.sin().multiply(x.sin())),
                     CR.valueOf(1),
                     "sin(x)^2 + cos(x)^2 != 1:" + xAsDouble);
         // Check that inverses are consistent
-        checkApprEq(x, TAN.execute(ATAN.execute(x)),
+        checkEq(x, TAN.execute(ATAN.execute(x)),
                       "tan(atan(" + xAsDouble + ")" );
         CR tmp = ACOS.execute(x.cos());
         // Result or its inverse should differ from x by an
@@ -125,8 +120,8 @@ public class SlowCRTest extends TestCase {
                           "exp float compare:" + xAsDouble);
         }
         if (Math.abs(xAsDouble) <= 1000.0) {
-            checkApprEq(x, x.exp().ln(), "ln(exp) failed:" + xAsDouble);
-            checkApprEq(x.multiply(CR.valueOf(2)).exp(),
+            checkEq(x, x.exp().ln(), "ln(exp) failed:" + xAsDouble);
+            checkEq(x.multiply(CR.valueOf(2)).exp(),
 
                         x.exp().multiply(x.exp()),
                         "exp^2 failed:" + xAsDouble);
@@ -134,13 +129,13 @@ public class SlowCRTest extends TestCase {
         if (xAsDouble > 0.000000001) {
             checkApprEq(x.ln().doubleValue(), Math.log(xAsDouble),
                           "exp float compare:" + xAsDouble);
-            checkApprEq(x, x.ln().exp(), "exp(ln) failed:" + xAsDouble);
-            checkApprEq(x.ln().divide(CR.valueOf(2)), x.sqrt().ln(),
+            checkEq(x, x.ln().exp(), "exp(ln) failed:" + xAsDouble);
+            checkEq(x.ln().divide(CR.valueOf(2)), x.sqrt().ln(),
                         "ln(sqrt) failed:" + xAsDouble);
             // Check that ln(xv) = ln(x) + ln(v) for various v
             for (int i = 1; i <= 5; ++i) {
                 CR v = CR.valueOf(i);
-                checkApprEq(
+                checkEq(
                     x.ln().add(v.ln()),
                     x.multiply(v).ln(),
                     "ln(product) formula failed for:" + xAsDouble + "," + i);
@@ -149,21 +144,21 @@ public class SlowCRTest extends TestCase {
     }
 
     private static void checkBasic(CR x) {
-        checkApprEq(x.abs().sqrt().multiply(x.abs().sqrt()), x.abs(),
+        checkEq(x.abs().sqrt().multiply(x.abs().sqrt()), x.abs(),
                     "sqrt*sqrt:" + x.doubleValue());
         if (!x.get_appr(TEST_PREC).equals(BigInteger.ZERO)) {
-            checkApprEq(x.inverse().inverse(), x,
+            checkEq(x.inverse().inverse(), x,
                         "inverse(inverse):" + x.doubleValue());
         }
     }
 
     public void testSlowTrig() {
-        checkApprEq(ACOS.execute(ZERO), CR.PI.divide(TWO), "acos(0)");
-        checkApprEq(ACOS.execute(ONE), ZERO, "acos(1)");
-        checkApprEq(ACOS.execute(ONE.negate()), CR.PI, "acos(-1)");
-        checkApprEq(ASIN.execute(ZERO), ZERO, "asin(0)");
-        checkApprEq(ASIN.execute(ONE), CR.PI.divide(TWO), "asin(1)");
-        checkApprEq(ASIN.execute(ONE.negate()),
+        checkEq(ACOS.execute(ZERO), CR.PI.divide(TWO), "acos(0)");
+        checkEq(ACOS.execute(ONE), ZERO, "acos(1)");
+        checkEq(ACOS.execute(ONE.negate()), CR.PI, "acos(-1)");
+        checkEq(ASIN.execute(ZERO), ZERO, "asin(0)");
+        checkEq(ASIN.execute(ONE), CR.PI.divide(TWO), "asin(1)");
+        checkEq(ASIN.execute(ONE.negate()),
                                  CR.PI.divide(TWO).negate(), "asin(-1)");
         checkTrig(ZERO);
         CR BIG = CR.valueOf(200).exp();
@@ -194,7 +189,7 @@ public class SlowCRTest extends TestCase {
     }
 
     public void testSlowExpLn() {
-        checkApprEq(CR.valueOf(1).ln(), CR.valueOf(0), "ln(1) != 0");
+        checkEq(CR.valueOf(1).ln(), CR.valueOf(0), "ln(1) != 0");
         checkExpLn(CR.valueOf(0));
         CR BIG = CR.valueOf(200).exp();
         checkExpLn(BIG);
@@ -222,8 +217,8 @@ public class SlowCRTest extends TestCase {
     }
 
     public void testSlowBasic() {
-        checkApprEq(ZERO.sqrt(), ZERO, "sqrt(0)");
-        checkApprEq(ZERO.abs(), ZERO, "abs(0)");
+        checkEq(ZERO.sqrt(), ZERO, "sqrt(0)");
+        checkEq(ZERO.abs(), ZERO, "abs(0)");
         Random r = new Random();  // Random seed!
         for (int i = 0; i < NRANDOM; ++i) {
             double d = Math.exp(10.0 * r.nextDouble() - 1.0);
