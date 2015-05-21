@@ -1,3 +1,25 @@
+/*
+ * Copyright (C) 2015 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
+ * The above license covers additions and changes by AOSP authors.
+ * The original code is licensed as follows:
+ */
+
+//
 // Copyright (c) 1999, Silicon Graphics, Inc. -- ALL RIGHTS RESERVED
 //
 // Permission is granted free of charge to copy, modify, use and distribute
@@ -78,6 +100,8 @@
 // hboehm@google.com 4/25/2014
 // Changed cos() prescaling to avoid logarithmic depth tree.
 // hboehm@google.com 6/30/2014
+// Added explicit asin() implementation.  Remove one.  Add ZERO and ONE and
+// make them public.  hboehm@google.com 5/21/2015
 
 package com.hp.creals;
 
@@ -146,14 +170,16 @@ public abstract class CR extends Number {
 
     // First some frequently used constants, so we don't have to
     // recompute these all over the place.
-      static final BigInteger big0 = BigInteger.valueOf(0);
-      static final BigInteger big1 = BigInteger.valueOf(1);
+      static final BigInteger big0 = BigInteger.ZERO;
+      static final BigInteger big1 = BigInteger.ONE;
       static final BigInteger bigm1 = BigInteger.valueOf(-1);
       static final BigInteger big2 = BigInteger.valueOf(2);
       static final BigInteger big3 = BigInteger.valueOf(3);
       static final BigInteger big6 = BigInteger.valueOf(6);
       static final BigInteger big8 = BigInteger.valueOf(8);
-      static final BigInteger big10 = BigInteger.valueOf(10);
+      static final BigInteger big10 = BigInteger.TEN;
+      static final BigInteger big750 = BigInteger.valueOf(750);
+      static final BigInteger bigm750 = BigInteger.valueOf(-750);
 
 /**
 * Setting this to true requests that  all computations be aborted by
@@ -194,7 +220,7 @@ public volatile static boolean please_stop = false;
       // overflowng the integer used to hold a precision spec.
       // We generally perform this check early on, and then convince
       // ourselves that none of the operations performed on precisions
-      // inside a function can generatean overflow.
+      // inside a function can generate an overflow.
       static void check_prec(int n) {
         int high = n >> 28;
         // if n is not in danger of overflowing, then the 4 high order
@@ -263,7 +289,8 @@ public volatile static boolean please_stop = false;
         return valueOf((double) n);
       }
 
-      static CR one = valueOf(1);
+      public static CR ZERO = valueOf(0);
+      public static CR ONE = valueOf(1);
 
     // Multiply k by 2**n.
       static BigInteger shift(BigInteger k, int n) {
@@ -374,7 +401,7 @@ public volatile static boolean please_stop = false;
     // Natural log of 2.  Needed for some prescaling below.
     // ln(2) = 7ln(10/9) - 2ln(25/24) + 3ln(81/80)
         CR simple_ln() {
-            return new prescaled_ln_CR(this.subtract(one));
+            return new prescaled_ln_CR(this.subtract(ONE));
         }
         static CR ten_ninths = valueOf(10).divide(valueOf(9));
         static CR twentyfive_twentyfourths = valueOf(25).divide(valueOf(24));
@@ -839,7 +866,7 @@ public volatile static boolean please_stop = false;
         } else if (get_appr(-1).abs().compareTo(big2) >= 0) {
             // Scale further with double angle formula
             CR cos_half = shiftRight(1).cos();
-            return cos_half.multiply(cos_half).shiftLeft(1).subtract(one);
+            return cos_half.multiply(cos_half).shiftLeft(1).subtract(ONE);
         } else {
             return new prescaled_cos_CR(this);
         }
@@ -850,6 +877,28 @@ public volatile static boolean please_stop = false;
 */
     public CR sin() {
         return half_pi.subtract(this).cos();
+    }
+
+/**
+* The trignonometric arc (inverse) sine function.
+*/
+    public CR asin() {
+        BigInteger rough_appr = get_appr(-10);
+        if (rough_appr.compareTo(big750) /* 1/sqrt(2) + a bit */ > 0){
+            CR new_arg = ONE.subtract(multiply(this)).sqrt();
+            return new_arg.acos();
+        } else if (rough_appr.compareTo(bigm750) < 0) {
+            return negate().asin().negate();
+        } else {
+            return new prescaled_asin_CR(this);
+        }
+    }
+
+/**
+* The trignonometric arc (inverse) cosine function.
+*/
+    public CR acos() {
+        return half_pi.subtract(asin());
     }
 
     static final BigInteger low_ln_limit = big8; /* sixteenths, i.e. 1/2 */
@@ -1293,6 +1342,90 @@ class prescaled_ln_CR extends slow_CR {
         return scale(current_sum, calc_precision - p);
     }
 }
+
+// Representation of the arcsine of a constructive real.  Private.
+// Uses a Taylor series expansion.  Assumes |x| < (1/2)^(1/3).
+class prescaled_asin_CR extends slow_CR {
+    CR op;
+    prescaled_asin_CR(CR x) {
+        op = x;
+    }
+    protected BigInteger approximate(int p) {
+        // The Taylor series is the sum of x^(2n+1) * (2n)!/(4^n n!^2 (2n+1))
+        // Note that (2n)!/(4^n n!^2) is always less than one.
+        // (The denominator is effectively 2n*2n*(2n-2)*(2n-2)*...*2*2
+        // which is clearly > (2n)!)
+        // Thus all terms are bounded by x^(2n+1).
+        // Unfortunately, there's no easy way to prescale the argument
+        // to less than 1/sqrt(2), and we can only approximate that.
+        // Thus the worst case iteration count is fairly high.
+        // But it doesn't make much difference.
+        if (p >= 2) return big0;  // Never bigger than 4.
+        int iterations_needed = -3 * p / 2 + 4;
+                                // conservative estimate > 0.
+                                // Follows from assumed bound on x and
+                                // the fact that only every other Taylor
+                                // Series term is present.
+          //  Claim: each intermediate term is accurate
+          //  to 2*2^calc_precision.
+          //  Total rounding error in series computation is
+          //  2*iterations_needed*2^calc_precision,
+          //  exclusive of error in op.
+        int calc_precision = p - bound_log2(2*iterations_needed)
+                               - 4; // for error in op, truncation.
+        int op_prec = p - 3;  // always <= -2
+        BigInteger op_appr = op.get_appr(op_prec);
+          // Error in argument results in error of < 1/4 ulp.
+          // (Derivative is bounded by 2 in the specified range and we use
+          // 3 extra digits.)
+          // Ignoring the argument error, each term has an error of
+          // < 3ulps relative to calc_precision, which is more precise than p.
+          // Cumulative arithmetic rounding error is < 3/16 ulp (relative to p).
+          // Series truncation error < 2/16 ulp.  (Each computed term
+          // is at most 2/3 of last one, so some of remaining series <
+          // 3/2 * current term.)
+          // Final rounding error is <= 1/2 ulp.
+          // Thus final error is < 1 ulp (relative to p).
+        BigInteger max_last_term =
+                big1.shiftLeft(p - 4 - calc_precision);
+        int exp = 1; // Current exponent, = 2n+1 in above expression
+        BigInteger current_term = op_appr.shiftLeft(op_prec - calc_precision);
+        BigInteger current_sum = current_term;
+        BigInteger current_factor = current_term;
+                                    // Current scaled Taylor series term
+                                    // before division by the exponent.
+                                    // Accurate to 3 ulp at calc_precision.
+        while (current_term.abs().compareTo(max_last_term) >= 0) {
+          if (Thread.interrupted() || please_stop) throw new AbortedError();
+          exp += 2;
+          // current_factor = current_factor * op * op * (exp-1) * (exp-2) /
+          // (exp-1) * (exp-1), with the two exp-1 factors cancelling,
+          // giving
+          // current_factor = current_factor * op * op * (exp-2) / (exp-1)
+          // Thus the error any in the previous term is multiplied by
+          // op^2, adding an error of < (1/2)^(2/3) < 2/3 the original
+          // error.
+          current_factor = current_factor.multiply(BigInteger.valueOf(exp - 2));
+          current_factor = scale(current_factor.multiply(op_appr), op_prec + 2);
+                // Carry 2 extra bits of precision forward; thus
+                // this effectively introduces 1/8 ulp error.
+          current_factor = current_factor.multiply(op_appr);
+          BigInteger divisor = BigInteger.valueOf(exp - 1);
+          current_factor = current_factor.divide(divisor);
+                // Another 1/4 ulp error here.
+          current_factor = scale(current_factor, op_prec - 2);
+                // Remove extra 2 bits.  1/2 ulp rounding error.
+          // Current_factor has original 3 ulp rounding error, which we
+          // reduced by 1, plus < 1 ulp new rounding error.
+          current_term = current_factor.divide(BigInteger.valueOf(exp));
+                // Contributes 1 ulp error to sum plus at most 3 ulp
+                // from current_factor.
+          current_sum = current_sum.add(current_term);
+        }
+        return scale(current_sum, calc_precision - p);
+      }
+  }
+
 
 class sqrt_CR extends CR {
     CR op;

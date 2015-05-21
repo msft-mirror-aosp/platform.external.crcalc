@@ -36,7 +36,8 @@
 // jurisdiction in such courts, the courts of the State of California), with
 // venue lying exclusively in Santa Clara County, California.
 //
-// 5/2014 Added Strings to ArithmeticExceptions
+// 5/2014 Added Strings to ArithmeticExceptions.
+// 5/2015 Added support for direct asin() implementation in CR.
 
 package com.hp.creals;
 // import android.util.Log;
@@ -101,15 +102,17 @@ public abstract class UnaryCRFunction {
     public static final UnaryCRFunction tanFunction =
         new tan_UnaryCRFunction();
 
-    // Helper for some of the following public members.
-    static CR half_pi = CR.PI.divide(CR.valueOf(2));
 /**
 * The function object corresponding to the inverse sine (arcsine) function.
 * The argument must be between -1 and 1 inclusive.  The result is between
 * -PI/2 and PI/2.
 */
     public static final UnaryCRFunction asinFunction =
-        UnaryCRFunction.sinFunction.inverseMonotone(half_pi.negate(), half_pi);
+        new asin_UnaryCRFunction();
+        // The following also works, but is slower:
+        // CR half_pi = CR.PI.divide(CR.valueOf(2));
+        // UnaryCRFunction.sinFunction.inverseMonotone(half_pi.negate(),
+        //                                             half_pi);
 
 /**
 * The function object corresponding to the inverse cosine (arccosine) function.
@@ -188,9 +191,15 @@ class tan_UnaryCRFunction extends UnaryCRFunction {
     }
 }
 
+class asin_UnaryCRFunction extends UnaryCRFunction {
+    public CR execute(CR x) {
+        return x.asin();
+    }
+}
+
 class acos_UnaryCRFunction extends UnaryCRFunction {
     public CR execute(CR x) {
-        return half_pi.subtract(asinFunction.execute(x));
+        return x.acos();
     }
 }
 
@@ -204,7 +213,7 @@ class atan_UnaryCRFunction extends UnaryCRFunction {
         CR x2 = x.multiply(x);
         CR abs_sin_atan = x2.divide(one.add(x2)).sqrt();
         CR sin_atan = x.select(abs_sin_atan.negate(), abs_sin_atan);
-        return asinFunction.execute(sin_atan);
+        return sin_atan.asin();
     }
 }
 
@@ -627,7 +636,7 @@ class monotoneDerivative_UnaryCRFunction extends UnaryCRFunction {
             // Ensure that we stay within the interval.
               if (log_delta > max_delta_msd) log_delta = max_delta_msd;
             log_delta -= extra_prec;
-            CR delta = one.shiftLeft(log_delta);
+            CR delta = ONE.shiftLeft(log_delta);
 
             CR left = arg.subtract(delta);
             CR right = arg.add(delta);

@@ -41,6 +41,8 @@
 // Added test for division by negative number.  Hans_Boehm@hp.com, 8/13/01
 // Modified to use AssertionFailedError. hboehm@google.com, 6/6/14
 // Modified further for Android/JUnit testing framework, 12/15/14
+// Added basic asin and acos tests, improved messages,
+//        hboehm@google.com, 5/22/15
 
 package com.hp.creals;
 
@@ -53,10 +55,14 @@ public class CRTest extends TestCase {
         if (!x) throw new AssertionFailedError(s);
     }
     private static void check_eq(CR x, CR y, String s) {
-        if (x.compareTo(y, -50) != 0) throw new AssertionFailedError(s);
+        if (x.compareTo(y, -50) != 0) {
+            throw new AssertionFailedError(s + "(" + x + " vs. " + y + ")");
+        }
     }
     private static void check_appr_eq(double x, double y, String s) {
-        if (Math.abs(x - y) > 0.000001) throw new AssertionFailedError(s);
+        if (Math.abs(x - y) > 0.000001) {
+            throw new AssertionFailedError(s + "(" + x + " vs. " + y + ")");
+        }
     }
     // TODO: Break this up into meaningful smaller tests.
     public void testCR() {
@@ -139,6 +145,12 @@ public class CRTest extends TestCase {
                           "cos failed at " + n);
             check_appr_eq(Math.exp(n), CR.valueOf(n).exp().doubleValue(),
                           "exp failed at " + n);
+            check_appr_eq(Math.asin(0.1*n),
+                          CR.valueOf(0.1*n).asin().doubleValue(),
+                          "asin failed at " + 0.1*n);
+            check_appr_eq(Math.acos(0.1*n),
+                          CR.valueOf(0.1*n).acos().doubleValue(),
+                          "acos failed at " + 0.1*n);
             if (n > 0.0) {
               check_appr_eq(Math.log(n), CR.valueOf(n).ln().doubleValue(),
                           "ln failed at " + n);

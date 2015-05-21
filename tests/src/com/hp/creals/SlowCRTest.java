@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-/* THIS TYPICALLY TAKES > 10 MINUTES TO RUN!  It shold generate no output during that time. */
+// THIS TYPICALLY TAKES > 4 MINUTES TO RUN!
+// It should generate no output during that time.
 
 package com.hp.creals;
 
@@ -50,13 +51,15 @@ public class SlowCRTest extends TestCase {
     final static CR TWO = CR.valueOf(2);
     final static CR BIG = CR.valueOf(200).exp();
     final static CR SMALL = BIG.inverse();
+    final static CR HALF_PI = CR.PI.divide(CR.valueOf(2));
 
-    final static UnaryCRFunction ASIN = UnaryCRFunction.asinFunction;
-    final static UnaryCRFunction ACOS = UnaryCRFunction.acosFunction;
     final static UnaryCRFunction ATAN = UnaryCRFunction.atanFunction;
     final static UnaryCRFunction TAN = UnaryCRFunction.tanFunction;
     final static UnaryCRFunction COSINE = UnaryCRFunction.sinFunction
                                              .monotoneDerivative(ZERO, CR.PI);
+    final static UnaryCRFunction ARCSINE =
+                 UnaryCRFunction.sinFunction.inverseMonotone(HALF_PI.negate(),
+                                                             HALF_PI);
 
     // Perform some consistency checks on trig functions at x
     // We assume that x is within floating point range.
@@ -73,10 +76,12 @@ public class SlowCRTest extends TestCase {
                           "atan float compare:" + xAsDouble);
         }
         if (Math.abs(xAsDouble) < 1.0) {
-            checkApprEq(ASIN.execute(x).doubleValue(), Math.asin(xAsDouble),
+            checkApprEq(x.asin().doubleValue(), Math.asin(xAsDouble),
                           "asin float compare:" + xAsDouble);
-            checkApprEq(ACOS.execute(x).doubleValue(), Math.acos(xAsDouble),
-                          "acos float compare:" + xAsDouble );
+            checkApprEq(x.acos().doubleValue(), Math.acos(xAsDouble),
+                          "acos float compare:" + xAsDouble);
+            checkEq(ARCSINE.execute(x), x.asin(),
+                          "inverse(sin) compare:" + xAsDouble);
         }
         if (xAsDouble < 3.1415926535 && xAsDouble > 0.0) {
             checkApprEq(COSINE.execute(x).doubleValue(), Math.cos(xAsDouble),
@@ -98,14 +103,18 @@ public class SlowCRTest extends TestCase {
                     "sin(x)^2 + cos(x)^2 != 1:" + xAsDouble);
         // Check that inverses are consistent
         checkEq(x, TAN.execute(ATAN.execute(x)),
-                      "tan(atan(" + xAsDouble + ")" );
-        CR tmp = ACOS.execute(x.cos());
+                      "tan(atan(" + xAsDouble + ")");
+        CR xcos = x.cos();
+        CR tmp = xcos.acos();
         // Result or its inverse should differ from x by an
         // exact multiple of pi.
         check(isApprInt(tmp.subtract(x).divide(CR.PI))
               || isApprInt(tmp.add(x).divide(CR.PI)),
               "acos(cos):" + xAsDouble);
-        tmp = ASIN.execute(x.sin());
+        CR xsin = x.sin();
+        tmp = ARCSINE.execute(xsin);
+        CR tmp2 = xsin.asin();
+        checkEq(tmp, tmp2, "Asin(sin) computations differ:" + xAsDouble);
         // Result or its inverse should differ from x by an
         // exact multiple of pi.
         check(isApprInt(tmp.subtract(x).divide(CR.PI))
@@ -153,13 +162,12 @@ public class SlowCRTest extends TestCase {
     }
 
     public void testSlowTrig() {
-        checkEq(ACOS.execute(ZERO), CR.PI.divide(TWO), "acos(0)");
-        checkEq(ACOS.execute(ONE), ZERO, "acos(1)");
-        checkEq(ACOS.execute(ONE.negate()), CR.PI, "acos(-1)");
-        checkEq(ASIN.execute(ZERO), ZERO, "asin(0)");
-        checkEq(ASIN.execute(ONE), CR.PI.divide(TWO), "asin(1)");
-        checkEq(ASIN.execute(ONE.negate()),
-                                 CR.PI.divide(TWO).negate(), "asin(-1)");
+        checkEq(ZERO.acos(), CR.PI.divide(TWO), "acos(0)");
+        checkEq(ONE.acos(), ZERO, "acos(1)");
+        checkEq(ONE.negate().acos(), CR.PI, "acos(-1)");
+        checkEq(ZERO.asin(), ZERO, "asin(0)");
+        checkEq(ONE.asin(), CR.PI.divide(TWO), "asin(1)");
+        checkEq(ONE.negate().asin(), CR.PI.divide(TWO).negate(), "asin(-1)");
         checkTrig(ZERO);
         CR BIG = CR.valueOf(200).exp();
         checkTrig(BIG);
