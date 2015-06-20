@@ -431,7 +431,7 @@ class inverseMonotone_UnaryCRFunction extends UnaryCRFunction {
             BigInteger difference = h.subtract(l);
             for(int i = 0;; ++i) {
                 if (Thread.interrupted() || please_stop)
-                    throw new AbortedError();
+                    throw new AbortedException();
                 trace("***Iteration: " + i);
                 trace("Arg prec = " + working_arg_prec
                       + " eval prec = " + working_eval_prec
@@ -653,7 +653,7 @@ class monotoneDerivative_UnaryCRFunction extends UnaryCRFunction {
                 return scale(appr_left_deriv, -extra_prec);
             } else {
                 if (Thread.interrupted() || please_stop)
-                    throw new AbortedError();
+                    throw new AbortedException();
                 deriv2_msd[0] =
                         eval_prec + deriv_difference.bitLength() + 4/*slop*/;
                 deriv2_msd[0] -= log_delta;

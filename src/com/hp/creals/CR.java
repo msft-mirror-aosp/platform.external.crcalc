@@ -151,11 +151,11 @@ import java.math.BigInteger;
 * provides the same functionality, but adds the caching necessary to obtain
 * reasonable performance.
 * <P>
-* Any operation may throw <TT>com.hp.creals.AbortedError</tt> if the thread in
+* Any operation may throw <TT>com.hp.creals.AbortedException</tt> if the thread in
 * which it is executing is interrupted.  (<TT>InterruptedException</tt> cannot
 * be used for this purpose, since CR inherits from <TT>Number</tt>.)
 * <P>
-* Any operation may also throw <TT>com.hp.creals.PrecisionOverflowError</tt>
+* Any operation may also throw <TT>com.hp.creals.PrecisionOverflowException</tt>
 * If the precision request generated during any subcalculation overflows
 * a 28-bit integer.  (This should be extremely unlikely, except as an
 * outcome of a division by zero, or other erroneous computation.)
@@ -167,6 +167,29 @@ public abstract class CR extends Number {
     // plus the current best approximation.
     // We could do without the latter, but that would
     // be atrociously slow.
+
+/**
+ * Indicates a constructive real operation was interrupted.
+ * Most constructive real operations may throw such an exception.
+ * This is unchecked, since Number methods may not raise checked
+ * exceptions.
+*/
+public static class AbortedException extends RuntimeException {
+    public AbortedException() { super(); }
+    public AbortedException(String s) { super(s); }
+}
+
+/**
+ * Indicates that the number of bits of precision requested by
+ * a computation on constructive reals required more than 28 bits,
+ * and was thus in danger of overflowing an int.
+ * This is likely to be a symptom of a diverging computation,
+ * <I>e.g.</i> division by zero.
+*/
+public static class PrecisionOverflowException extends RuntimeException {
+    public PrecisionOverflowException() { super(); }
+    public PrecisionOverflowException(String s) { super(s); }
+}
 
     // First some frequently used constants, so we don't have to
     // recompute these all over the place.
@@ -183,7 +206,7 @@ public abstract class CR extends Number {
 
 /**
 * Setting this to true requests that  all computations be aborted by
-* throwing AbortedError.  Must be rest to false before any further
+* throwing AbortedException.  Must be rest to false before any further
 * computation.  Ideally Thread.interrupt() should be used instead, but
 * that doesn't appear to be consistently supported by browser VMs.
 */
@@ -229,7 +252,7 @@ public volatile static boolean please_stop = false;
         // that should be as cheap as possible.
         int high_shifted = n >> 29;
         if (0 != (high ^ high_shifted)) {
-            throw new PrecisionOverflowError();
+            throw new PrecisionOverflowException();
         }
       }
 
@@ -376,7 +399,7 @@ public volatile static boolean please_stop = false;
             int msd = msd(prec);
             if (msd != Integer.MIN_VALUE) return msd;
             check_prec(prec);
-            if (Thread.interrupted() || please_stop) throw new AbortedError();
+            if (Thread.interrupted() || please_stop) throw new AbortedException();
         }
         return msd(n);
       }
@@ -614,7 +637,7 @@ public volatile static boolean please_stop = false;
         long long_msd_prec = (long)(log2_radix * (double)m);
         if (long_msd_prec > (long)Integer.MAX_VALUE
             || long_msd_prec < (long)Integer.MIN_VALUE)
-            throw new PrecisionOverflowError();
+            throw new PrecisionOverflowException();
         int msd_prec = (int)long_msd_prec;
         check_prec(msd_prec);
         int msd = iter_msd(msd_prec - 2);
@@ -1196,7 +1219,7 @@ class prescaled_exp_CR extends CR {
         BigInteger max_trunc_error =
                 big1.shiftLeft(p - 4 - calc_precision);
         while (current_term.abs().compareTo(max_trunc_error) >= 0) {
-          if (Thread.interrupted() || please_stop) throw new AbortedError();
+          if (Thread.interrupted() || please_stop) throw new AbortedException();
           n += 1;
           /* current_term = current_term * op / n */
           current_term = scale(current_term.multiply(op_appr), op_prec);
@@ -1239,7 +1262,7 @@ class prescaled_cos_CR extends slow_CR {
         current_term = big1.shiftLeft(-calc_precision);
         BigInteger current_sum = current_term;
         while (current_term.abs().compareTo(max_trunc_error) >= 0) {
-          if (Thread.interrupted() || please_stop) throw new AbortedError();
+          if (Thread.interrupted() || please_stop) throw new AbortedException();
           n += 2;
           /* current_term = - current_term * op * op / n * (n - 1)   */
           current_term = scale(current_term.multiply(op_appr), op_prec);
@@ -1286,7 +1309,7 @@ class integral_atan_CR extends slow_CR {
         BigInteger max_trunc_error =
                 big1.shiftLeft(p - 2 - calc_precision);
         while (current_term.abs().compareTo(max_trunc_error) >= 0) {
-          if (Thread.interrupted() || please_stop) throw new AbortedError();
+          if (Thread.interrupted() || please_stop) throw new AbortedException();
           n += 2;
           current_power = current_power.divide(big_op_squared);
           current_sign = -current_sign;
@@ -1331,7 +1354,7 @@ class prescaled_ln_CR extends slow_CR {
         BigInteger max_trunc_error =
                 big1.shiftLeft(p - 4 - calc_precision);
         while (current_term.abs().compareTo(max_trunc_error) >= 0) {
-          if (Thread.interrupted() || please_stop) throw new AbortedError();
+          if (Thread.interrupted() || please_stop) throw new AbortedException();
           n += 1;
           current_sign = -current_sign;
           x_nth = scale(x_nth.multiply(op_appr), op_prec);
@@ -1396,7 +1419,7 @@ class prescaled_asin_CR extends slow_CR {
                                     // before division by the exponent.
                                     // Accurate to 3 ulp at calc_precision.
         while (current_term.abs().compareTo(max_last_term) >= 0) {
-          if (Thread.interrupted() || please_stop) throw new AbortedError();
+          if (Thread.interrupted() || please_stop) throw new AbortedException();
           exp += 2;
           // current_factor = current_factor * op * op * (exp-1) * (exp-2) /
           // (exp-1) * (exp-1), with the two exp-1 factors cancelling,
