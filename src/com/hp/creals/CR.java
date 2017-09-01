@@ -102,10 +102,13 @@
 // hboehm@google.com 6/30/2014
 // Added explicit asin() implementation.  Remove one.  Add ZERO and ONE and
 // make them public.  hboehm@google.com 5/21/2015
+// Added Gauss-Legendre PI implementation.  Removed two.
+// hboehm@google.com 4/12/2016
 
 package com.hp.creals;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
 
 /**
 * Constructive real numbers, also known as recursive, or computable reals.
@@ -151,9 +154,9 @@ import java.math.BigInteger;
 * provides the same functionality, but adds the caching necessary to obtain
 * reasonable performance.
 * <P>
-* Any operation may throw <TT>com.hp.creals.AbortedException</tt> if the thread in
-* which it is executing is interrupted.  (<TT>InterruptedException</tt> cannot
-* be used for this purpose, since CR inherits from <TT>Number</tt>.)
+* Any operation may throw <TT>com.hp.creals.AbortedException</tt> if the thread
+* in which it is executing is interrupted.  (<TT>InterruptedException</tt>
+* cannot be used for this purpose, since CR inherits from <TT>Number</tt>.)
 * <P>
 * Any operation may also throw <TT>com.hp.creals.PrecisionOverflowException</tt>
 * If the precision request generated during any subcalculation overflows
@@ -287,7 +290,9 @@ public volatile static boolean please_stop = false;
 */
       public static CR valueOf(double n) {
         if (Double.isNaN(n)) throw new ArithmeticException("Nan argument");
-        if (Double.isInfinite(n)) throw new ArithmeticException("Infinite argument");
+        if (Double.isInfinite(n)) {
+            throw new ArithmeticException("Infinite argument");
+        }
         boolean negative = (n < 0.0);
         long bits = Double.doubleToLongBits(Math.abs(n));
         long mantissa = (bits & 0xfffffffffffffL);
@@ -399,7 +404,9 @@ public volatile static boolean please_stop = false;
             int msd = msd(prec);
             if (msd != Integer.MIN_VALUE) return msd;
             check_prec(prec);
-            if (Thread.interrupted() || please_stop) throw new AbortedException();
+            if (Thread.interrupted() || please_stop) {
+                throw new AbortedException();
+            }
         }
         return msd(n);
       }
@@ -435,8 +442,8 @@ public volatile static boolean please_stop = false;
         static CR ln2_3 = valueOf(3).multiply(eightyone_eightyeths.simple_ln());
         static CR ln2 = ln2_1.subtract(ln2_2).add(ln2_3);
 
-    // Atan of integer reciprocal.  Used for PI.  Could perhaps
-    // be made public.
+    // Atan of integer reciprocal.  Used for atan_PI.  Could perhaps be made
+    // public.
         static CR atan_reciprocal(int n) {
             return new integral_atan_CR(n);
         }
@@ -861,12 +868,19 @@ public volatile static boolean please_stop = false;
         }
     }
 
-    static CR two = valueOf(2);
-
 /**
 * The ratio of a circle's circumference to its diameter.
 */
-    public static CR PI = four.multiply(four.multiply(atan_reciprocal(5))
+    public static CR PI = new gl_pi_CR();
+
+    // Our old PI implementation. Keep this around for now to allow checking.
+    // This implementation may also be faster for BigInteger implementations
+    // that support only quadratic multiplication, but exhibit high performance
+    // for small computations.  (The standard Android 6 implementation supports
+    // subquadratic multiplication, but has high constant overhead.) Many other
+    // atan-based formulas are possible, but based on superficial
+    // experimentation, this is roughly as good as the more complex formulas.
+    public static CR atan_PI = four.multiply(four.multiply(atan_reciprocal(5))
                                             .subtract(atan_reciprocal(239)));
         // pi/4 = 4*atan(1/5) - atan(1/239)
     static CR half_pi = PI.shiftRight(1);
@@ -1453,6 +1467,14 @@ class prescaled_asin_CR extends slow_CR {
 class sqrt_CR extends CR {
     CR op;
     sqrt_CR(CR x) { op = x; }
+    // Explicitly provide an initial approximation.
+    // Useful for arithmetic geometric mean algorithms, where we've previously
+    // computed a very similar square root.
+    sqrt_CR(CR x, int min_p, BigInteger max_a) {
+        op = x;
+        min_prec = min_p;
+        max_appr = max_a;
+    }
     final int fp_prec = 50;     // Conservative estimate of number of
                                 // significant bits in double precision
                                 // computation.
@@ -1495,5 +1517,89 @@ class sqrt_CR extends CR {
             int shift_count = working_prec/2 - p;
             return shift(scaled_sqrt, shift_count);
         }
+    }
+}
+
+// The constant PI, computed using the Gauss-Legendre alternating
+// arithmetic-geometric mean algorithm:
+//      a[0] = 1
+//      b[0] = 1/sqrt(2)
+//      t[0] = 1/4
+//      p[0] = 1
+//
+//      a[n+1] = (a[n] + b[n])/2        (arithmetic mean, between 0.8 and 1)
+//      b[n+1] = sqrt(a[n] * b[n])      (geometric mean, between 0.7 and 1)
+//      t[n+1] = t[n] - (2^n)(a[n]-a[n+1])^2,  (always between 0.2 and 0.25)
+//
+//      pi is then approximated as (a[n+1]+b[n+1])^2 / 4*t[n+1].
+//
+class gl_pi_CR extends slow_CR {
+    // In addition to the best approximation kept by the CR base class, we keep
+    // the entire sequence b[n], to the extent we've needed it so far.  Each
+    // reevaluation leads to slightly different sqrt arguments, but the
+    // previous result can be used to avoid repeating low precision Newton
+    // iterations for the sqrt approximation.
+    ArrayList<Integer> b_prec = new ArrayList<Integer>();
+    ArrayList<BigInteger> b_val = new ArrayList<BigInteger>();
+    gl_pi_CR() {
+        b_prec.add(null);  // Zeroth entry unused.
+        b_val.add(null);
+    }
+    private static BigInteger TOLERANCE = BigInteger.valueOf(4);
+    // sqrt(1/2)
+    private static CR SQRT_HALF = new sqrt_CR(ONE.shiftRight(1));
+
+    protected BigInteger approximate(int p) {
+        // Rough approximations are easy.
+        if (p >= 0) return scale(BigInteger.valueOf(3), -p);
+        // We need roughly log2(p) iterations.  Each iteration should
+        // contribute no more than 2 ulps to the error in the corresponding
+        // term (a[n], b[n], or t[n]).  Thus 2log2(n) bits plus a few for the
+        // final calulation and rounding suffice.
+        final int extra_eval_prec =
+                (int)Math.ceil(Math.log(-p) / Math.log(2)) + 10;
+        // All our terms are implicitly scaled by eval_prec.
+        final int eval_prec = p - extra_eval_prec;
+        BigInteger a = BigInteger.ONE.shiftLeft(-eval_prec);
+        BigInteger b = SQRT_HALF.get_appr(eval_prec);
+        BigInteger t = BigInteger.ONE.shiftLeft(-eval_prec - 2);
+        int n = 0;
+        while (a.subtract(b).subtract(TOLERANCE).signum() > 0) {
+            // Current values correspond to n, next_ values to n + 1
+            // b_prec.size() == b_val.size() >= n + 1
+            final BigInteger next_a = a.add(b).shiftRight(1);
+            final BigInteger a_diff = a.subtract(next_a);
+            CR next_b_as_CR;
+            final BigInteger b_prod = a.multiply(b).shiftRight(-eval_prec);
+            // We the compute square root approximations using a nested
+            // temporary CR computation, to avoid implementing BigInteger
+            // square roots separately.
+            final CR b_prod_as_CR = CR.valueOf(b_prod).shiftRight(-eval_prec);
+            if (b_prec.size() == n + 1) {
+                // Need an n+1st slot.
+                b_prec.add(null);
+                b_val.add(null);
+                next_b_as_CR = b_prod_as_CR.sqrt();
+            } else {
+                // Reuse previous approximation to reduce sqrt iterations,
+                // hopefully to one.
+                next_b_as_CR = new sqrt_CR(b_prod_as_CR, b_prec.get(n + 1),
+                                           b_val.get(n + 1));
+            }
+            // b_prec.size() == b_val.size() >= n + 2
+            final BigInteger next_b = next_b_as_CR.get_appr(eval_prec);
+            b_prec.set(n + 1, Integer.valueOf(p));
+            b_val.set(n + 1, scale(next_b, -extra_eval_prec));
+            final BigInteger next_t =
+                    t.subtract(a_diff.multiply(a_diff)
+                     .shiftLeft(n + eval_prec));  // shift dist. usually neg.
+            a = next_a;
+            b = next_b;
+            t = next_t;
+            ++n;
+        }
+        final BigInteger sum = a.add(b);
+        final BigInteger result = sum.multiply(sum).divide(t).shiftRight(2);
+        return scale(result, -extra_eval_prec);
     }
 }
