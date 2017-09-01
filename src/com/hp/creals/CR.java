@@ -714,6 +714,8 @@ public volatile static boolean please_stop = false;
 /**
 * Return a double which differs by less than one in the least
 * represented bit from the constructive real.
+* (We're in fact closer to round-to-nearest than that, but we can't and
+* don't promise correct rounding.)
 */
     public double doubleValue() {
         int my_msd = iter_msd(-1080 /* slightly > exp. range */);
@@ -725,7 +727,9 @@ public volatile static boolean please_stop = false;
         long exp_adj = may_underflow? needed_prec + 96 : needed_prec;
         long orig_exp = (scaled_int_rep >> 52) & 0x7ff;
         if (((orig_exp + exp_adj) & ~0x7ff) != 0) {
-            // overflow
+            // Original unbiased exponent is > 50. Exp_adj > -1050.
+            // Thus this can overflow the 11 bit exponent only if the result
+            // itself overflows.
             if (scaled_int < 0.0) {
                 return Double.NEGATIVE_INFINITY;
             } else {
@@ -748,6 +752,8 @@ public volatile static boolean please_stop = false;
 */
     public float floatValue() {
         return (float)doubleValue();
+        // Note that double-rounding is not a problem here, since we
+        // cannot, and do not, guarantee correct rounding.
     }
 
 /**
