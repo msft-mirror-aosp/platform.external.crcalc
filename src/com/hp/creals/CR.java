@@ -104,6 +104,11 @@
 // make them public.  hboehm@google.com 5/21/2015
 // Added Gauss-Legendre PI implementation.  Removed two.
 // hboehm@google.com 4/12/2016
+// Fix shift operation in doubleValue. That produced incorrect values for
+// large negative exponents.
+// Don't negate argument and compute inverse for exp(). That causes severe
+// performance problems for (-huge).exp()
+// hboehm@google.com 8/21/2017
 
 package com.hp.creals;
 
@@ -200,6 +205,7 @@ public static class PrecisionOverflowException extends RuntimeException {
       static final BigInteger big1 = BigInteger.ONE;
       static final BigInteger bigm1 = BigInteger.valueOf(-1);
       static final BigInteger big2 = BigInteger.valueOf(2);
+      static final BigInteger bigm2 = BigInteger.valueOf(-2);
       static final BigInteger big3 = BigInteger.valueOf(3);
       static final BigInteger big6 = BigInteger.valueOf(6);
       static final BigInteger big8 = BigInteger.valueOf(8);
@@ -865,8 +871,9 @@ public volatile static boolean please_stop = false;
     public CR exp() {
         final int low_prec = -10;
         BigInteger rough_appr = get_appr(low_prec);
-        if (rough_appr.signum() < 0) return negate().exp().inverse();
-        if (rough_appr.compareTo(big2) > 0) {
+        // Handle negative arguments directly; negating and computing inverse
+        // can be very expensive.
+        if (rough_appr.compareTo(big2) > 0 || rough_appr.compareTo(bigm2) < 0) {
             CR square_root = shiftRight(1).exp();
             return square_root.multiply(square_root);
         } else {
@@ -1208,7 +1215,7 @@ class inv_CR extends CR {
 
 
 // Representation of the exponential of a constructive real.  Private.
-// Uses a Taylor series expansion.  Assumes x < 1/2.
+// Uses a Taylor series expansion.  Assumes |x| < 1/2.
 // Note: this is known to be a bad algorithm for
 // floating point.  Unfortunately, other alternatives
 // appear to require precomputed information.
