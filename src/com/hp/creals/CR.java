@@ -109,6 +109,7 @@
 // Don't negate argument and compute inverse for exp(). That causes severe
 // performance problems for (-huge).exp()
 // hboehm@google.com 8/21/2017
+// Have comparison check for interruption. hboehm@google.com 10/31/2017
 
 package com.hp.creals;
 
@@ -513,6 +514,9 @@ public volatile static boolean please_stop = false;
             check_prec(a);
             int result = compareTo(x, a);
             if (0 != result) return result;
+            if (Thread.interrupted() || please_stop) {
+                throw new AbortedException();
+            }
         }
       }
 
@@ -542,6 +546,9 @@ public volatile static boolean please_stop = false;
             check_prec(a);
             int result = signum(a);
             if (0 != result) return result;
+            if (Thread.interrupted() || please_stop) {
+                throw new AbortedException();
+            }
         }
       }
 
