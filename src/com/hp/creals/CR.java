@@ -1502,7 +1502,7 @@ class sqrt_CR extends CR {
     final int fp_op_prec = 60;
     protected BigInteger approximate(int p) {
         int max_op_prec_needed = 2*p - 1;
-        int msd = op.msd(max_op_prec_needed);
+        int msd = op.iter_msd(max_op_prec_needed);
         if (msd <= max_op_prec_needed) return big0;
         int result_msd = msd/2;                 // +- 1
         int result_digits = result_msd - p;     // +- 2
