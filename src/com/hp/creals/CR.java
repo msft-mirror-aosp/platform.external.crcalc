@@ -1494,15 +1494,16 @@ class sqrt_CR extends CR {
         op = x;
         min_prec = min_p;
         max_appr = max_a;
+        appr_valid = true;
     }
     final int fp_prec = 50;     // Conservative estimate of number of
                                 // significant bits in double precision
                                 // computation.
     final int fp_op_prec = 60;
     protected BigInteger approximate(int p) {
-        int max_prec_needed = 2*p - 1;
-        int msd = op.msd(max_prec_needed);
-        if (msd <= max_prec_needed) return big0;
+        int max_op_prec_needed = 2*p - 1;
+        int msd = op.iter_msd(max_op_prec_needed);
+        if (msd <= max_op_prec_needed) return big0;
         int result_msd = msd/2;                 // +- 1
         int result_digits = result_msd - p;     // +- 2
         if (result_digits > fp_prec) {
@@ -1510,11 +1511,12 @@ class sqrt_CR extends CR {
             int appr_digits = result_digits/2 + 6;
                 // This should be conservative.  Is fewer enough?
             int appr_prec = result_msd - appr_digits;
-            BigInteger last_appr = get_appr(appr_prec);
             int prod_prec = 2*appr_prec;
+            // First compute the argument to maximal precision, so we don't end up
+            // reevaluating it incrementally.
             BigInteger op_appr = op.get_appr(prod_prec);
-                // Slightly fewer might be enough;
-            // Compute (last_appr * last_appr + op_appr)/(last_appr/2)
+            BigInteger last_appr = get_appr(appr_prec);
+            // Compute (last_appr * last_appr + op_appr) / last_appr / 2
             // while adjusting the scaling to make everything work
             BigInteger prod_prec_scaled_numerator =
                 last_appr.multiply(last_appr).add(op_appr);
