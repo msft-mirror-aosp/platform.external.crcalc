@@ -110,6 +110,10 @@
 // performance problems for (-huge).exp()
 // hboehm@google.com 8/21/2017
 // Have comparison check for interruption. hboehm@google.com 10/31/2017
+// Fix precision overflow issue in most general compareTo function.
+// Fix a couple of unused variable bugs. Notably selector_sign was
+// accidentally locally redeclared. (This turns out to be safe but useless.)
+// hboehm@google.com 11/20/2018.
 
 package com.hp.creals;
 
@@ -473,9 +477,11 @@ public volatile static boolean please_stop = false;
         int this_msd = iter_msd(a);
         int x_msd = x.iter_msd(this_msd > a? this_msd : a);
         int max_msd = (x_msd > this_msd? x_msd : this_msd);
+        if (max_msd == Integer.MIN_VALUE) {
+          return 0;
+        }
+        check_prec(r);
         int rel = max_msd + r;
-            // This can't approach overflow, since r and a are
-            // effectively divided by 2, and msds are checked.
         int abs_prec = (rel > a? rel : a);
         return compareTo(x, abs_prec);
       }
@@ -1108,7 +1114,7 @@ class select_CR extends CR {
     CR op2;
     select_CR(CR s, CR x, CR y) {
         selector = s;
-        int selector_sign = selector.get_appr(-20).signum();
+        selector_sign = selector.get_appr(-20).signum();
         op1 = x;
         op2 = y;
     }
@@ -1379,7 +1385,6 @@ class prescaled_ln_CR extends slow_CR {
         int op_prec = p - 3;
         BigInteger op_appr = op.get_appr(op_prec);
           // Error analysis as for exponential.
-        BigInteger scaled_1 = big1.shiftLeft(-calc_precision);
         BigInteger x_nth = scale(op_appr, op_prec - calc_precision);
         BigInteger current_term = x_nth;  // x**n
         BigInteger current_sum = current_term;
